@@ -1,25 +1,13 @@
-# DOCKERFILE SIMPLES (sem boas práticas - propositalmente!)
-# Este é um exemplo de como NÃO fazer um Dockerfile
-
-FROM golang:1.21-alpine
-
-# Instalar ffmpeg
-RUN apk add --no-cache ffmpeg
-
-# Criar diretório de trabalho
+FROM golang:1.24-alpine AS build
 WORKDIR /app
-
-# Copiar arquivos
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
+RUN CGO_ENABLED=0 go build -o /worker .
 
-# Instalar dependências
-RUN go mod tidy
-
-# Criar diretórios necessários
-RUN mkdir -p uploads outputs temp
-
-# Expor porta
-EXPOSE 8090
-
-# Executar aplicação
-CMD ["go", "run", "main.go"] 
+FROM alpine:3.20
+RUN apk add --no-cache ffmpeg
+ENV OUTPUTS_DIR=/data/outputs
+RUN mkdir -p /data/outputs
+COPY --from=build /worker /usr/local/bin/worker
+ENTRYPOINT ["worker"]
