@@ -20,6 +20,21 @@ não tem banco nem HTTP. Consome pedidos de uma fila do RabbitMQ, extrai os fram
 |---|---|---|
 | `RABBITMQ_URL` | `amqp://guest:guest@localhost:5672` | Conexão com o RabbitMQ. |
 | `OUTPUTS_DIR` | `/data/outputs` | Diretório dos pacotes gerados (volume compartilhado). |
+| `METRICS_ADDR` | `:9091` | Endereço do servidor HTTP que expõe as métricas. |
+
+## Métricas (Prometheus)
+
+O worker sobe um servidor HTTP que expõe métricas no formato do Prometheus em `/metrics`
+(porta configurável por `METRICS_ADDR`):
+
+```shell
+curl http://localhost:9091/metrics
+```
+
+Além das métricas padrão de runtime do Go (goroutines, memória e coletor de lixo), o worker
+publica `videos_processados_total` com o rótulo `status` (`CONCLUIDO` ou `ERRO`) e
+`video_processamento_duracao_segundos`, um histograma da duração do processamento. O scrape e
+os dashboards ficam no [`fiapx-infra`](https://github.com/edionay/fiapx-infra).
 
 ## Rodar
 
