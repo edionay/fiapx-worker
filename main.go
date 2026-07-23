@@ -36,10 +36,13 @@ type mensagemResultado struct {
 func main() {
 	url := comPadrao("RABBITMQ_URL", "amqp://guest:guest@localhost:5672")
 	saidaDir := comPadrao("OUTPUTS_DIR", "/data/outputs")
+	metricasAddr := comPadrao("METRICS_ADDR", ":9091")
 
 	if err := os.MkdirAll(saidaDir, 0o755); err != nil {
 		log.Fatalf("não foi possível criar %s: %v", saidaDir, err)
 	}
+
+	iniciarServidorMetricas(metricasAddr)
 
 	conexao := conectar(url)
 	defer conexao.Close()
@@ -78,9 +81,12 @@ func tratar(canal *amqp.Channel, saidaDir string, entrega amqp.Delivery) {
 	log.Printf("processando vídeo %s", msg.VideoID)
 	publicarResultado(canal, mensagemResultado{VideoID: msg.VideoID, Status: "PROCESSANDO"})
 
+	inicio := time.Now()
 	caminhoZip, err := processarVideo(msg.CaminhoEntrada, msg.VideoID, saidaDir)
+	duracaoProcessamento.Observe(time.Since(inicio).Seconds())
 	if err != nil {
 		log.Printf("falha ao processar %s: %v", msg.VideoID, err)
+		videosProcessados.WithLabelValues("ERRO").Inc()
 		publicarResultado(canal, mensagemResultado{
 			VideoID:      msg.VideoID,
 			Status:       "ERRO",
@@ -88,6 +94,7 @@ func tratar(canal *amqp.Channel, saidaDir string, entrega amqp.Delivery) {
 		})
 	} else {
 		log.Printf("vídeo %s concluído: %s", msg.VideoID, caminhoZip)
+		videosProcessados.WithLabelValues("CONCLUIDO").Inc()
 		publicarResultado(canal, mensagemResultado{
 			VideoID:    msg.VideoID,
 			Status:     "CONCLUIDO",

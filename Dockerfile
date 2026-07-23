@@ -10,4 +10,5 @@ RUN apk add --no-cache ffmpeg
 ENV OUTPUTS_DIR=/data/outputs
 RUN mkdir -p /data/outputs
 COPY --from=build /worker /usr/local/bin/worker
+EXPOSE 9091
 ENTRYPOINT ["worker"]
