@@ -8,7 +8,7 @@ RUN CGO_ENABLED=0 go build -o /worker .
 FROM alpine:3.20
 RUN apk add --no-cache ffmpeg
 ENV OUTPUTS_DIR=/data/outputs
-RUN mkdir -p /data/outputs
+RUN mkdir -p /data/outputs && chown -R 1000:1000 /data
 COPY --from=build /worker /usr/local/bin/worker
 EXPOSE 9091
 ENTRYPOINT ["worker"]
